@@ -15,12 +15,13 @@ def getFileMd5(filename):
     f.close()
     return myHash.hexdigest()
 if __name__ == '__main__':
-    parse = argparse.ArgumentParser()
-    parse.add_argument("-s",help="srcfile...")
-    parse.add_argument("-p",help="dstfile path...")
-    args = parse.parse_args()
-    srcfile = args.s.strip()
-    dstpath = args.p.strip()
-    os.system("cp -rf %s %s"%(srcfile,dstpath))
-    if getFileMd5(srcfile) == getFileMd5(dstpath):
-        print("md5 ok...")
+    # parse = argparse.ArgumentParser()
+    # parse.add_argument("-s",help="srcfile...")
+    # parse.add_argument("-p",help="dstfile path...")
+    # args = parse.parse_args()
+    # srcfile = args.s.strip()
+    # dstpath = args.p.strip()
+    # os.system("cp -rf %s %s"%(srcfile,dstpath))
+    # if getFileMd5(srcfile) == getFileMd5(dstpath):
+    #     print("md5 ok...")
+    print(getFileMd5("./largefile"))
