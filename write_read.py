@@ -7,16 +7,18 @@ import hashlib
 
 
 def test_write():
-    try:
-        os.remove("./1g")
-    except:
-        pass
-
-    os.system('cd /media/kylin/*;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches;dd if=/dev/zero of=./1g bs=1M count=1024 1> ~/write.txt 2>&1"')
-    result = os.popen("cat ~/write.txt |awk '{print $10$11}'|tail -n 1")
+    sum = 0
+    times = args.times
+    while times > 0:
+        os.system('cd /mnt/usb;rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=1024 1> ~/write.txt 2>&1')
+        result = os.popen("cat ~/write.txt |awk '{print $10}'|tail -n 1")
+        result = float(result.read().strip())
+        sum += result
+        times -= 1
+    avg = sum/args.times
     headers = ["测试项", "次数", "值"]
     rows = [
-        {"测试项": "文件写速度", "次数": 1, "值": result.read().strip()},
+        {"测试项": "文件写速度", "次数": args.times, "值": str(avg)+"MB/s"},
     ]
     with open("write.csv", "w", encoding="utf-8") as f:
         l_csv = csv.DictWriter(f, headers)
@@ -24,11 +26,19 @@ def test_write():
         l_csv.writerows(rows)
 
 def  test_read():
-    os.system('cd /media/kylin/*;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g bs=1M | dd of=/dev/null 1>~/read.txt 2>&1')
-    result = os.popen("cat ~/read.txt |awk '{print $10$11}'|tail -n 1")
+
+    times = args.times
+    sum = 0
+    while times > 0:
+        os.system('cd /media/kylin/*;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g bs=1M | dd of=/dev/null 1>~/read.txt 2>&1')
+        result = os.popen("cat ~/read.txt |awk '{print $10}'|tail -n 1")
+        sum +=  float(result.read().strip())
+        times -= 1
+    avg = sum/args.times
     headers = ["测试项", "次数", "值"]
+
     rows = [
-        {"测试项": "文件读速度", "次数":1, "值": result.read().strip()},
+        {"测试项": "文件读速度", "次数":args.times, "值": str(avg)+"MB/s"},
     ]
     with open("read.csv", "w", encoding="utf-8") as f:
         l_csv = csv.DictWriter(f, headers)
@@ -76,14 +86,17 @@ if __name__ == '__main__':
             os.remove(file)
     except:
         pass
-    # parse = argparse.ArgumentParser()
+    parse = argparse.ArgumentParser()
     # parse.add_argument("-p","--path",help="Specify U disk path...")
-    # args = parse.parse_args()
+    parse.add_argument("-c","--times",type=int,help="test times ...")
+    parse.add_argument("-w","--write",action="store_true",default=False,help="test write ...")
+    parse.add_argument("-r","--read",action="store_true",default=False,help="test read ...")
+    args = parse.parse_args()
     # if args.path == None:
     #     parse.print_help()
     #     sys.exit()
     # verifymd5(args)
     test_write()
-    test_read()
-    totalreport()
+    # test_read()
+    # totalreport()
 

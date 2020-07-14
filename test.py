@@ -1,4 +1,5 @@
-import os
-import subprocess
-os.system("touch test.txt")
-os.system("ls >test.txt;ping www.baidu.com -c1>>test.txt")
+sum = 0
+a = 12.0
+b = 11
+sum = a + b
+print(sum/2)
