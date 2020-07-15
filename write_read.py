@@ -81,6 +81,8 @@ class TestUsb():
             l_csv = csv.DictWriter(f, headers)
             l_csv.writeheader()
             l_csv.writerows(rows)
+            e = csv.writer(f)
+            e.writerow([])
 
 
     def getFileMd5(self,filename):
