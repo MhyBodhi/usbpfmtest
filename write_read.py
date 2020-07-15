@@ -2,85 +2,121 @@ import sys
 import time
 import csv
 import argparse
+import re
 import os
 import hashlib
+from multiprocessing import Process
 
+class TestUsb():
 
-def test_write():
-    sum = 0
-    times = args.times
-    while times > 0:
-        os.system('cd /mnt/usb;rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=1024 1> ~/write.txt 2>&1')
-        result = os.popen("cat ~/write.txt |awk '{print $10}'|tail -n 1")
-        result = float(result.read().strip())
-        sum += result
-        times -= 1
-    avg = sum/args.times
-    headers = ["测试项", "次数", "值"]
-    rows = [
-        {"测试项": "文件写速度", "次数": args.times, "值": str(avg)+"MB/s"},
-    ]
-    with open("write.csv", "w", encoding="utf-8") as f:
-        l_csv = csv.DictWriter(f, headers)
-        l_csv.writeheader()
-        l_csv.writerows(rows)
+    def __init__(self):
 
-def  test_read():
+        regex = re.compile("\s+(.*[1-9]+)\s+")
+        self.devs = os.popen("ls /dev/sd*").read()
+        print("devs", self.devs)
+        self.usbdevs = regex.findall(self.devs)
 
-    times = args.times
-    sum = 0
-    while times > 0:
-        os.system('cd /media/kylin/*;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g bs=1M | dd of=/dev/null 1>~/read.txt 2>&1')
-        result = os.popen("cat ~/read.txt |awk '{print $10}'|tail -n 1")
-        sum +=  float(result.read().strip())
-        times -= 1
-    avg = sum/args.times
-    headers = ["测试项", "次数", "值"]
+        for usbdev in self.usbdevs:
+            os.system("sudo umount " + usbdev)
+            if not os.path.exists("/mnt/{}".format(usbdev.split("/")[-1])):
+                os.system("sudo mkdir /mnt/{}".format(usbdev.split("/")[-1]))
+            os.system("sudo mount " + usbdev + " /mnt/{}".format(usbdev.split("/")[-1]))
+        self.usbs = [usbdev.split("/")[-1] for usbdev in self.usbdevs]
 
-    rows = [
-        {"测试项": "文件读速度", "次数":args.times, "值": str(avg)+"MB/s"},
-    ]
-    with open("read.csv", "w", encoding="utf-8") as f:
-        l_csv = csv.DictWriter(f, headers)
-        l_csv.writeheader()
-        l_csv.writerows(rows)
+    def test_write(self,usb):
+        sum = 0
+        times = args.times
+        while times > 0:
+            os.system('cd /mnt/{usb};rm -rf ./1g;dd if=/dev/zero of=./1g bs=1M count=512 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
+            result = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb))
+            result = float(result.read().strip())
+            sum += result
+            times -= 1
+        avg = "%.2f"%(sum/args.times)
+        headers = ["设备","测试项", "次数", "值"]
+        rows = [
+            {"设备":usb,"测试项": "文件写速度", "次数": args.times, "值": str(avg)+"MB/s"},
+        ]
+        with open("{usb}write.csv".format(usb=usb), "w", encoding="utf-8") as f:
+            l_csv = csv.DictWriter(f, headers)
+            l_csv.writeheader()
+            l_csv.writerows(rows)
+            # l_csv.writerow([])
 
+    def  test_read(self,usb):
 
-def getFileMd5(filename):
-    if not os.path.isfile(filename):
-        print("文件不存在...")
-        return
-    myHash = hashlib.md5()
-    f = open(filename, 'rb')
-    while True:
-        b = f.read(8096)
-        if not b:
-            break
-        myHash.update(b)
-    f.close()
-    return myHash.hexdigest()
+        times = args.times
+        sum = 0
+        while times > 0:
+            os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1M 1>~/{usb}read.txt 2>&1'.format(usb=usb))
+            result = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb))
+            sum +=  float(result.read().strip())
+            times -= 1
+        avg = "%.2f"%(sum/args.times)
+        headers = ["设备","测试项", "次数", "值"]
 
-def totalreport():
-    csvfiles = [file for file in os.listdir(".") if file.endswith("csv")]
-    try:
-        with open("total.csv", "a", newline="", encoding="utf-8") as f:
-            fw_csv = csv.writer(f)
-            for csvfile in csvfiles:
-                with open(csvfile, "r", encoding="utf-8") as fl:
-                    fr_csv = csv.reader(fl)
-                    for row in fr_csv:
-                        fw_csv.writerow(row)
-    except Exception as e:
-        print("生成总报告发生错误:",e)
-        return
-def verifymd5(args):
-    srcfile = args.path
-    dstfile = "/mnt/usb/" + srcfile.split("/")[-1]
-    os.system("cp -rf {srcfile} {dstfile}".format(srcfile=srcfile, dstfile=dstfile))
-    if getFileMd5(srcfile) == getFileMd5(dstfile):
-        print("测试通过...")
+        rows = [
+            {"设备":usb,"测试项": "文件读速度", "次数":args.times, "值": str(avg)+"MB/s"},
+        ]
+        with open("{usb}read.csv".format(usb=usb), "w", encoding="utf-8") as f:
+            l_csv = csv.DictWriter(f, headers)
+            l_csv.writeheader()
+            l_csv.writerows(rows)
+            # l_csv.writerow([])
 
+    def getFileMd5(self,filename):
+
+        if not os.path.isfile(filename):
+            print("文件不存在...")
+            return
+        myHash = hashlib.md5()
+        f = open(filename, 'rb')
+        while True:
+            b = f.read(8096)
+            if not b:
+                break
+            myHash.update(b)
+        f.close()
+        return myHash.hexdigest()
+
+    def totalreport(self):
+
+        csvfiles = [file for file in os.listdir(".") if file.endswith("csv")]
+        try:
+            with open("total.csv", "a", newline="", encoding="utf-8") as f:
+                fw_csv = csv.writer(f)
+                for csvfile in csvfiles:
+                    with open(csvfile, "r", encoding="utf-8") as fl:
+                        fr_csv = csv.reader(fl)
+                        for row in fr_csv:
+                            fw_csv.writerow(row)
+        except Exception as e:
+            print("生成总报告发生错误:",e)
+            return
+    def verifymd5(self,args):
+
+        srcfile = args.path
+        dstfile = "/mnt/usb/" + srcfile.split("/")[-1]
+        os.system("cp -rf {srcfile} {dstfile}".format(srcfile=srcfile, dstfile=dstfile))
+        if self.getFileMd5(srcfile) == self.getFileMd5(dstfile):
+            print("测试通过...")
+    def run(self):
+        usblist = []
+        for usb in self.usbs:
+            usblist.append(Process(target=self.test_write,args=(usb,)))
+        for i in usblist:
+            i.start()
+        for j in usblist:
+            j.join()
+        usblist.clear()
+        for usb in self.usbs:
+            usblist.append(Process(target=self.test_read, args=(usb,)))
+        for i in usblist:
+            i.start()
+        for j in usblist:
+            j.join()
 if __name__ == '__main__':
+
     try:
         for file in [file for file in os.listdir(".") if file.endswith(".csv")]:
             os.remove(file)
@@ -89,14 +125,22 @@ if __name__ == '__main__':
     parse = argparse.ArgumentParser()
     # parse.add_argument("-p","--path",help="Specify U disk path...")
     parse.add_argument("-c","--times",type=int,help="test times ...")
-    parse.add_argument("-w","--write",action="store_true",default=False,help="test write ...")
-    parse.add_argument("-r","--read",action="store_true",default=False,help="test read ...")
+    # parse.add_argument("-w","--write",action="store_true",default=False,help="test write ...")
+    # parse.add_argument("-r","--read",action="store_true",default=False,help="test read ...")
     args = parse.parse_args()
-    # if args.path == None:
+    if args.times == None:
+        parse.print_help()
+        sys.exit()
+    # if args.write and args.read:
+    #     test_write()
+    #     test_read()
+    # elif args.write:
+    #     test_write()
+    # elif args.read:
+    #     test_read()
+    # else:
     #     parse.print_help()
     #     sys.exit()
-    # verifymd5(args)
-    test_write()
-    # test_read()
-    # totalreport()
-
+    usb = TestUsb()
+    usb.run()
+    usb.totalreport()
