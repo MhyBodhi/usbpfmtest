@@ -131,6 +131,7 @@ class TestUsb():
             usbsrcpath = usb+"."+self.srcpath.split(".")[-1]
             os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
             usblist.append(Process(target=self.test_write_read_md5,args=(usb,usbsrcpath)))
+        print("初始化完成...")
         for i in usblist:
             i.start()
         for j in usblist:
