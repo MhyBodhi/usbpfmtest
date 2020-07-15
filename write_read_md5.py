@@ -62,7 +62,7 @@ class TestUsb():
             sum_read += float(result.read().strip())
 
             #测试文件md5
-            if self.verifymd5(usb):
+            if self.verifymd5(usb,usbsrcpath):
                 md5_success += 1
 
             times -= 1
