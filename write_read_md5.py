@@ -45,7 +45,7 @@ class TestUsb():
                 raise FileNotFoundError
         self.dstpath =None
 
-    def test_write_read_md5(self,usb):
+    def test_write_read_md5(self,usb,usbsrcpath):
         sum_read = 0
         sum_write = 0
         md5_success = 0
@@ -115,10 +115,11 @@ class TestUsb():
             print("生成总报告发生错误:",e)
             return
 
-    def verifymd5(self,usb):
+    def verifymd5(self,usb,usbsrcpath):
 
-        os.system("sudo cp -rf {srcfile} /mnt/{usb}".format(srcfile=self.srcpath,usb=usb))
-        self.dstpath = "/mnt/{usb}/{srcfile}".format(usb=usb,srcfile=self.srcpath)
+        os.system("sudo cp -rf {srcfile} /mnt/{usb}".format(srcfile=usbsrcpath,usb=usb))
+        self.dstpath = "/mnt/{usb}/{srcfile}".format(usb=usb,srcfile=usbsrcpath)
+
         if self.getFileMd5(self.srcpath) == self.getFileMd5(self.dstpath):
             return True
         else:
@@ -127,7 +128,9 @@ class TestUsb():
     def run(self):
         usblist = []
         for usb in self.usbs:
-            usblist.append(Process(target=self.test_write_read_md5,args=(usb,)))
+            usbsrcpath = usb+"."+self.srcpath.split(".")[-1]
+            os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
+            usblist.append(Process(target=self.test_write_read_md5,args=(usb,usbsrcpath)))
         for i in usblist:
             i.start()
         for j in usblist:
@@ -135,7 +138,6 @@ class TestUsb():
 
     def getFile(self):
         res = requests.get(self.url).content
-        print("执行到了这里...")
         with open(self.srcpath, "wb") as f:
             f.write(res)
         print("下载成功...")

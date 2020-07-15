@@ -11,4 +11,4 @@
 #     if not os.path.exists("/mnt/{}".format(usbdev.split("/")[-1])):
 #         os.system("sudo mkdir /mnt/{}".format(usbdev.split("/")[-1]))
 #     os.system("sudo mount "+usbdev+" /mnt/{}".format(usbdev.split("/")[-1]))
-print("那个%s"%("这个"))
+print("src.jpg".split("/")[-1])
