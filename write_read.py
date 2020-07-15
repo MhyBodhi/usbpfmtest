@@ -28,7 +28,7 @@ class TestUsb():
 
         if self.url.startswith("http"):
             try:
-                self.srcpath = "src." + self.url.split(".")[-1][0:3]
+                self.srcpath = "src." + self.url.split(r".")[-1][0:3]
                 self.getFile()
             except requests.exceptions.ConnectionError:
                 if os.path.exists(self.srcpath):
@@ -37,6 +37,7 @@ class TestUsb():
                     print("请检查网络连接是否正常...")
                     sys.exit()
         else:
+            self.srcpath = self.url
             if os.path.exists(self.srcpath):
                 pass
             else:
@@ -44,47 +45,39 @@ class TestUsb():
                 raise FileNotFoundError
         self.dstpath =None
 
-    def test_write(self,usb):
-        sum = 0
+    def test_write_read_md5(self,usb):
+        sum_read = 0
+        sum_write = 0
         md5_success = 0
         times = args.times
         while times > 0:
+            #测试写
             os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=2048 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
             result = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb))
-            result = float(result.read().strip())
-            sum += result
+            sum_write += float(result.read().strip())
+
+            #测试读
+            os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(usb=usb))
+            result = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb))
+            sum_read += float(result.read().strip())
+
+            #测试文件md5
             if self.verifymd5(usb):
                 md5_success += 1
+
             times -= 1
-        avg = "%.2f"%(sum/args.times)
-        per_success = "%.2f"%(md5_success/args.times)
+
+        avg_write = "%.2f"%(sum_write/args.times)
+        avg_read = "%.2f"%(sum_read/args.times)
+        per_success = "%.2f%%"%(md5_success/args.times*100)
         headers = ["设备","测试项", "次数", "值"]
         rows = [
-            {"设备":usb,"测试项": "文件写速度", "次数": args.times, "值": avg+"MB/s"},
+            {"设备":usb,"测试项": "写速度", "次数": args.times, "值": "平均"+avg_write+"MB/s"},
+            {"设备":usb,"测试项": "读速度", "次数": args.times, "值": "平均"+avg_read+"MB/s"},
             {"设备":usb,"测试项": "文件md5验证", "次数": args.times, "值": "成功率"+per_success},
         ]
-        with open("{usb}write.csv".format(usb=usb), "w", encoding="utf-8") as f:
-            l_csv = csv.DictWriter(f, headers)
-            l_csv.writeheader()
-            l_csv.writerows(rows)
 
-
-    def test_read(self,usb):
-
-        times = args.times
-        sum = 0
-        while times > 0:
-            os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(usb=usb))
-            result = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb))
-            sum +=  float(result.read().strip())
-            times -= 1
-        avg = "%.2f"%(sum/args.times)
-        headers = ["设备","测试项", "次数", "值"]
-
-        rows = [
-            {"设备":usb,"测试项": "文件读速度", "次数":args.times, "值": str(avg)+"MB/s"},
-        ]
-        with open("{usb}read.csv".format(usb=usb), "w", encoding="utf-8") as f:
+        with open("test{usb}.csv".format(usb=usb), "w", encoding="utf-8") as f:
             l_csv = csv.DictWriter(f, headers)
             l_csv.writeheader()
             l_csv.writerows(rows)
@@ -132,14 +125,7 @@ class TestUsb():
     def run(self):
         usblist = []
         for usb in self.usbs:
-            usblist.append(Process(target=self.test_write,args=(usb,)))
-        for i in usblist:
-            i.start()
-        for j in usblist:
-            j.join()
-        usblist.clear()
-        for usb in self.usbs:
-            usblist.append(Process(target=self.test_read, args=(usb,)))
+            usblist.append(Process(target=self.test_write_read_md5,args=(usb,)))
         for i in usblist:
             i.start()
         for j in usblist:
@@ -147,6 +133,7 @@ class TestUsb():
 
     def getFile(self):
         res = requests.get(self.url).content
+        print("执行到了这里...")
         with open(self.srcpath, "wb") as f:
             f.write(res)
         print("下载成功...")
@@ -159,7 +146,7 @@ if __name__ == '__main__':
     except:
         pass
     parse = argparse.ArgumentParser()
-    parse.add_argument("-p","--path",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
+    parse.add_argument("-p","--path",default="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1594816125080&di=0d9259e683840a951e07c4305adbf156&imgtype=0&src=http%3A%2F%2Fimg3.iqilu.com%2Fdata%2Fattachment%2Fforum%2F201308%2F21%2F191917yresbbyhssbbhhjb.jpg",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
     parse.add_argument("-c","--times",type=int,help="test times ...")
     # parse.add_argument("-w","--write",action="store_true",default=False,help="test write ...")
     # parse.add_argument("-r","--read",action="store_true",default=False,help="test read ...")
