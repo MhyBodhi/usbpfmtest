@@ -164,23 +164,12 @@ if __name__ == '__main__':
     parse = argparse.ArgumentParser()
     parse.add_argument("-p","--path",default="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1594816125080&di=0d9259e683840a951e07c4305adbf156&imgtype=0&src=http%3A%2F%2Fimg3.iqilu.com%2Fdata%2Fattachment%2Fforum%2F201308%2F21%2F191917yresbbyhssbbhhjb.jpg",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
     parse.add_argument("-c","--times",type=int,help="test times ...")
-    # parse.add_argument("-w","--write",action="store_true",default=False,help="test write ...")
-    # parse.add_argument("-r","--read",action="store_true",default=False,help="test read ...")
+
     args = parse.parse_args()
     if args.times == None or args.path == None:
         parse.print_help()
         sys.exit()
 
-    # if args.write and args.read:
-    #     test_write()
-    #     test_read()
-    # elif args.write:
-    #     test_write()
-    # elif args.read:
-    #     test_read()
-    # else:
-    #     parse.logging.info_help()
-    #     sys.exit()
     usb = TestUsb()
     usb.run()
     usb.totalreports()
