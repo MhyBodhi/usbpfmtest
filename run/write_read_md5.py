@@ -58,15 +58,20 @@ class TestUsb():
         while times > 0:
             #测试写
             os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=2048 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
-            result = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb))
-            result = result.read().strip()
+            trans_unit = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
+            result = float(os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb)).read().strip())
+            if trans_unit == "kB/s":
+                result /= 1024
             print("结果",result)
-            sum_write += float(result)
+            sum_write += result
 
             #测试读
             os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(usb=usb))
-            result = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb))
-            sum_read += float(result.read().strip())
+            trans_unit =  os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
+            result = float(os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb)).read().strip())
+            if trans_unit == "kB/s":
+                result /= 1024
+            sum_read += result
 
             #测试文件md5
             if self.verifymd5(usb,usbsrcpath):
@@ -83,9 +88,6 @@ class TestUsb():
             {"设备":usb,"测试项": "读速度", "次数": args.times, "值": "平均"+avg_read+"MB/s"},
             {"设备":usb,"测试项": "文件md5验证", "次数": args.times, "值": "成功率"+per_success},
         ]
-        
-        
-        
 
         with open("../reports/test{usb}.csv".format(usb=usb), "w", encoding="utf-8") as f:
             l_csv = csv.DictWriter(f, headers)
