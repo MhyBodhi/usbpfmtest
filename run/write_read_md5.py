@@ -172,7 +172,7 @@ if __name__ == '__main__':
     except:
         logging.info("清理发生了异常...")
     parse = argparse.ArgumentParser()
-    parse.add_argument("-p","--path",default="https://bbs.qn.img-space.com/202006/13/25f5e9c10b47484cd64b197d5fa03f64.jpg?",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
+    parse.add_argument("-p","--path",default="https://pp.qn.img-space.com/201911/12/3cfc1c9b6781a772a2aa776de9df693c.jpg?",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
     parse.add_argument("-c","--times",type=int,help="test times ...")
 
     args = parse.parse_args()
