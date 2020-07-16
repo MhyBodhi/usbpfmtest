@@ -4,7 +4,7 @@ import argparse
 import re
 import os
 import hashlib
-import logging
+import logging.config
 from multiprocessing import Process
 import requests
 
@@ -107,14 +107,14 @@ class TestUsb():
         f.close()
         return myHash.hexdigest()
 
-    def totalreport(self):
+    def totalreports(self):
 
-        csvfiles = [file for file in os.listdir("../report/") if file.endswith("csv")]
+        csvfiles = [file for file in os.listdir("../reports/") if file.endswith("csv")]
         try:
             with open("total.csv", "a", newline="", encoding="utf-8") as f:
                 fw_csv = csv.writer(f)
                 for csvfile in csvfiles:
-                    with open("../report/"+csvfile, "r", encoding="utf-8") as fl:
+                    with open("../reports/"+csvfile, "r", encoding="utf-8") as fl:
                         fr_csv = csv.reader(fl)
                         for row in fr_csv:
                             fw_csv.writerow(row)
@@ -154,7 +154,7 @@ if __name__ == '__main__':
 
     try:
         for file in [file for file in os.listdir(".") if file.endswith(".csv")]:
-            os.remove(file)
+            os.remove("../resources/"+file)
     except:
         pass
     parse = argparse.ArgumentParser()
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     # parse.add_argument("-r","--read",action="store_true",default=False,help="test read ...")
     args = parse.parse_args()
     if args.times == None or args.path == None:
-        parse.logging.info_help()
+        parse.print_help()
         sys.exit()
 
     # if args.write and args.read:
@@ -179,4 +179,4 @@ if __name__ == '__main__':
     #     sys.exit()
     usb = TestUsb()
     usb.run()
-    usb.totalreport()
+    usb.totalreports()
