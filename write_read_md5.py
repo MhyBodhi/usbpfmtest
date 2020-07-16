@@ -4,8 +4,12 @@ import argparse
 import re
 import os
 import hashlib
+import logging
 from multiprocessing import Process
 import requests
+
+logging.config.fileConfig("../log/log.conf")
+logging = logging.getLogger()
 
 class TestUsb():
 
@@ -13,7 +17,7 @@ class TestUsb():
 
         regex = re.compile("\s+(.*[1-9]+)\s+")
         self.devs = os.popen("ls /dev/sd*").read()
-        print("devs", self.devs)
+        logging.info("devs", self.devs)
         self.usbdevs = regex.findall(self.devs)
 
         for usbdev in self.usbdevs:
@@ -28,20 +32,20 @@ class TestUsb():
 
         if self.url.startswith("http"):
             try:
-                self.srcpath = "src." + self.url.split(r".")[-1][0:3]
+                self.srcpath = "../resources/src." + self.url.split(r".")[-1][0:3]
                 self.getFile()
             except requests.exceptions.ConnectionError:
                 if os.path.exists(self.srcpath):
                     pass
                 else:
-                    print("请检查网络连接是否正常...")
+                    logging.info("请检查网络连接是否正常...")
                     sys.exit()
         else:
             self.srcpath = self.url
             if os.path.exists(self.srcpath):
                 pass
             else:
-                print("文件不存在...")
+                logging.info("文件不存在...")
                 raise FileNotFoundError
         self.dstpath =None
 
@@ -53,12 +57,12 @@ class TestUsb():
         while times > 0:
             #测试写
             os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=2048 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
-            result = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb))
+            result = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{logging.info $10}'|tail -n 1"%(usb))
             sum_write += float(result.read().strip())
 
             #测试读
             os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(usb=usb))
-            result = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb))
+            result = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{logging.info $10}'|tail -n 1" % (usb))
             sum_read += float(result.read().strip())
 
             #测试文件md5
@@ -76,6 +80,9 @@ class TestUsb():
             {"设备":usb,"测试项": "读速度", "次数": args.times, "值": "平均"+avg_read+"MB/s"},
             {"设备":usb,"测试项": "文件md5验证", "次数": args.times, "值": "成功率"+per_success},
         ]
+        
+        
+        
 
         with open("test{usb}.csv".format(usb=usb), "w", encoding="utf-8") as f:
             l_csv = csv.DictWriter(f, headers)
@@ -88,7 +95,7 @@ class TestUsb():
     def getFileMd5(self,filename):
 
         if not os.path.isfile(filename):
-            print("文件不存在...")
+            logging.info("文件不存在...")
             return
         myHash = hashlib.md5()
         f = open(filename, 'rb')
@@ -102,17 +109,17 @@ class TestUsb():
 
     def totalreport(self):
 
-        csvfiles = [file for file in os.listdir(".") if file.endswith("csv")]
+        csvfiles = [file for file in os.listdir("../report/") if file.endswith("csv")]
         try:
             with open("total.csv", "a", newline="", encoding="utf-8") as f:
                 fw_csv = csv.writer(f)
                 for csvfile in csvfiles:
-                    with open(csvfile, "r", encoding="utf-8") as fl:
+                    with open("../report/"+csvfile, "r", encoding="utf-8") as fl:
                         fr_csv = csv.reader(fl)
                         for row in fr_csv:
                             fw_csv.writerow(row)
         except Exception as e:
-            print("生成总报告发生错误:",e)
+            logging.info("生成总报告发生错误:",e)
             return
 
     def verifymd5(self,usb,usbsrcpath):
@@ -128,10 +135,10 @@ class TestUsb():
     def run(self):
         usblist = []
         for usb in self.usbs:
-            usbsrcpath = usb+"."+self.srcpath.split(".")[-1]
+            usbsrcpath = "../resources/"+usb+"."+self.srcpath.split(".")[-1]
             os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
             usblist.append(Process(target=self.test_write_read_md5,args=(usb,usbsrcpath)))
-        print("初始化完成...")
+        logging.info("初始化完成...")
         for i in usblist:
             i.start()
         for j in usblist:
@@ -141,7 +148,7 @@ class TestUsb():
         res = requests.get(self.url).content
         with open(self.srcpath, "wb") as f:
             f.write(res)
-        print("下载成功...")
+        logging.info("下载成功...")
 
 if __name__ == '__main__':
 
@@ -157,7 +164,7 @@ if __name__ == '__main__':
     # parse.add_argument("-r","--read",action="store_true",default=False,help="test read ...")
     args = parse.parse_args()
     if args.times == None or args.path == None:
-        parse.print_help()
+        parse.logging.info_help()
         sys.exit()
 
     # if args.write and args.read:
@@ -168,7 +175,7 @@ if __name__ == '__main__':
     # elif args.read:
     #     test_read()
     # else:
-    #     parse.print_help()
+    #     parse.logging.info_help()
     #     sys.exit()
     usb = TestUsb()
     usb.run()
