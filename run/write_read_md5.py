@@ -161,9 +161,9 @@ if __name__ == '__main__':
         for file in [file for file in os.listdir("../reports/") if file.endswith(".csv")]:
             os.remove("../reports/"+file)
         os.remove("../total.csv")
-        print("删除成功...")
+        logging.info("删除子报告成功...")
     except:
-        print("发生了异常...")
+        logging.info("删除子报告发生了异常...")
     parse = argparse.ArgumentParser()
     parse.add_argument("-p","--path",default="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1594816125080&di=0d9259e683840a951e07c4305adbf156&imgtype=0&src=http%3A%2F%2Fimg3.iqilu.com%2Fdata%2Fattachment%2Fforum%2F201308%2F21%2F191917yresbbyhssbbhhjb.jpg",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
     parse.add_argument("-c","--times",type=int,help="test times ...")
