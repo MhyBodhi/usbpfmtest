@@ -6,7 +6,7 @@ import re
 import os
 import hashlib
 import logging.config
-from multiprocessing import Process,Pool
+from multiprocessing import Pool
 import requests
 
 logging.config.fileConfig("../log/log.conf")
@@ -47,7 +47,7 @@ class TestUsb():
             if os.path.exists(self.srcpath):
                 pass
             else:
-                logging.info("文件不存在...")
+                logging.info("srcpath,文件不存在...")
                 raise FileNotFoundError
         self.dstpath =None
 
@@ -56,8 +56,11 @@ class TestUsb():
         sum_write = 0
         md5_success = 0
         times = args.times
+        testsum = 1
         while times > 0:
+            logging.info("第"+str(testsum)+"次测试...")
             #测试写
+            logging.info("测试写速度...")
             os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=2048 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
             trans_unit = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
             result = float(os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb)).read().strip())
@@ -67,6 +70,7 @@ class TestUsb():
             sum_write += result
 
             #测试读
+            logging.info("测试读速度...")
             os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(usb=usb))
             trans_unit =  os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
             result = float(os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb)).read().strip())
@@ -75,9 +79,10 @@ class TestUsb():
             sum_read += result
 
             #测试文件md5
+            logging.info("测试文件md5...")
             if self.verifymd5(usb,usbsrcpath):
                 md5_success += 1
-
+            testsum += 1
             times -= 1
 
         avg_write = "%.2f"%(sum_write/args.times)
@@ -101,7 +106,7 @@ class TestUsb():
     def getFileMd5(self,filename):
 
         if not os.path.isfile(filename):
-            logging.info("文件不存在...")
+            logging.info("md5,文件不存在...")
             return
         myHash = hashlib.md5()
         f = open(filename, 'rb')
@@ -151,17 +156,17 @@ class TestUsb():
         res = requests.get(self.url).content
         with open(self.srcpath, "wb") as f:
             f.write(res)
-        logging.info("下载成功...")
+        logging.info("下载源文件成功...")
 
 if __name__ == '__main__':
 
     try:
+        logging.info("清理数据文件...")
         for file in [file for file in os.listdir("../reports/") if file.endswith(".csv")]:
             os.remove("../reports/"+file)
         os.remove("../total.csv")
-        logging.info("删除子报告...")
     except:
-        logging.info("删除子报告发生了异常...")
+        logging.info("清理发生了异常...")
     parse = argparse.ArgumentParser()
     parse.add_argument("-p","--path",default="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1594816125080&di=0d9259e683840a951e07c4305adbf156&imgtype=0&src=http%3A%2F%2Fimg3.iqilu.com%2Fdata%2Fattachment%2Fforum%2F201308%2F21%2F191917yresbbyhssbbhhjb.jpg",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
     parse.add_argument("-c","--times",type=int,help="test times ...")
