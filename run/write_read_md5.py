@@ -6,7 +6,7 @@ import re
 import os
 import hashlib
 import logging.config
-from multiprocessing import Process
+from multiprocessing import Process,Pool
 import requests
 
 logging.config.fileConfig("../log/log.conf")
@@ -138,16 +138,13 @@ class TestUsb():
             return False
 
     def run(self):
-        usblist = []
+        pool = Pool(processes=10)
         for usb in self.usbs:
-            usbsrcpath = "../resources/"+usb+"."+self.srcpath.split(".")[-1]
+            usbsrcpath = "../resources/" + usb + "." + self.srcpath.split(".")[-1]
             os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
-            usblist.append(Process(target=self.test_write_read_md5,args=(usb,usbsrcpath)))
-        logging.info("初始化完成...")
-        for i in usblist:
-            i.start()
-        for j in usblist:
-            j.join()
+            pool.apply_async(self.test_write_read_md5,(usb,usbsrcpath))
+        pool.close()
+        pool.join()
 
     def getFile(self):
         res = requests.get(self.url).content
