@@ -22,7 +22,7 @@ class TestUsb():
         self.usbdevs = regex.findall(self.devs)
 
         for usbdev in self.usbdevs:
-            os.system("sudo umount " + usbdev)
+            os.system("sudo umount " + usbdev + " &>/dev/null")
             if not os.path.exists("/mnt/{}".format(usbdev.split("/")[-1])):
                 os.system("sudo mkdir /mnt/{}".format(usbdev.split("/")[-1]))
             os.system("sudo mount " + usbdev + " /mnt/{}".format(usbdev.split("/")[-1]))
