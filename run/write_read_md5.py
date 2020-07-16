@@ -161,7 +161,7 @@ if __name__ == '__main__':
         for file in [file for file in os.listdir("../reports/") if file.endswith(".csv")]:
             os.remove("../reports/"+file)
         os.remove("../total.csv")
-        logging.info("删除子报告成功...")
+        logging.info("删除子报告...")
     except:
         logging.info("删除子报告发生了异常...")
     parse = argparse.ArgumentParser()
