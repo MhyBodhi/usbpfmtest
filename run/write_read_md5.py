@@ -1,4 +1,5 @@
 import sys
+sys.path.append("..")
 import csv
 import argparse
 import re
@@ -17,7 +18,7 @@ class TestUsb():
 
         regex = re.compile("\s+(.*[1-9]+)\s+")
         self.devs = os.popen("ls /dev/sd*").read()
-        logging.info("devs", self.devs)
+        logging.info(("devs", self.devs))
         self.usbdevs = regex.findall(self.devs)
 
         for usbdev in self.usbdevs:
@@ -57,12 +58,14 @@ class TestUsb():
         while times > 0:
             #测试写
             os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=2048 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
-            result = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{logging.info $10}'|tail -n 1"%(usb))
-            sum_write += float(result.read().strip())
+            result = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb))
+            result = result.read().strip()
+            print("结果",result)
+            sum_write += float(result)
 
             #测试读
             os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(usb=usb))
-            result = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{logging.info $10}'|tail -n 1" % (usb))
+            result = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb))
             sum_read += float(result.read().strip())
 
             #测试文件md5
@@ -84,7 +87,7 @@ class TestUsb():
         
         
 
-        with open("test{usb}.csv".format(usb=usb), "w", encoding="utf-8") as f:
+        with open("../reports/test{usb}.csv".format(usb=usb), "w", encoding="utf-8") as f:
             l_csv = csv.DictWriter(f, headers)
             l_csv.writeheader()
             l_csv.writerows(rows)
@@ -111,7 +114,7 @@ class TestUsb():
 
         csvfiles = [file for file in os.listdir("../reports/") if file.endswith("csv")]
         try:
-            with open("total.csv", "a", newline="", encoding="utf-8") as f:
+            with open("../total.csv", "a", newline="", encoding="utf-8") as f:
                 fw_csv = csv.writer(f)
                 for csvfile in csvfiles:
                     with open("../reports/"+csvfile, "r", encoding="utf-8") as fl:
@@ -125,7 +128,7 @@ class TestUsb():
     def verifymd5(self,usb,usbsrcpath):
 
         os.system("sudo cp -rf {srcfile} /mnt/{usb}".format(srcfile=usbsrcpath,usb=usb))
-        self.dstpath = "/mnt/{usb}/{srcfile}".format(usb=usb,srcfile=usbsrcpath)
+        self.dstpath = "/mnt/{usb}/{srcfile}".format(usb=usb,srcfile=usbsrcpath.split("/")[-1])
 
         if self.getFileMd5(self.srcpath) == self.getFileMd5(self.dstpath):
             return True
@@ -153,10 +156,12 @@ class TestUsb():
 if __name__ == '__main__':
 
     try:
-        for file in [file for file in os.listdir(".") if file.endswith(".csv")]:
-            os.remove("../resources/"+file)
+        for file in [file for file in os.listdir("../reports/") if file.endswith(".csv")]:
+            os.remove("../reports/"+file)
+        os.remove("../total.csv")
+        print("删除成功...")
     except:
-        pass
+        print("发生了异常...")
     parse = argparse.ArgumentParser()
     parse.add_argument("-p","--path",default="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1594816125080&di=0d9259e683840a951e07c4305adbf156&imgtype=0&src=http%3A%2F%2Fimg3.iqilu.com%2Fdata%2Fattachment%2Fforum%2F201308%2F21%2F191917yresbbyhssbbhhjb.jpg",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
     parse.add_argument("-c","--times",type=int,help="test times ...")
