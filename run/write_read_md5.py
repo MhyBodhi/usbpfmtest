@@ -40,6 +40,7 @@ class TestUsb():
                     pass
                 else:
                     logging.info("请检查网络连接是否正常...")
+                    parse.print_help()
                     sys.exit()
         else:
             self.srcpath = self.url
