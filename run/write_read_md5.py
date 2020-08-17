@@ -149,9 +149,12 @@ class TestUsb():
 
     def run(self):
         pool = Pool(processes=10)
+        usbsrcpaths = []
         for usb in self.usbs:
             usbsrcpath = "../resources/" + usb + "." + self.srcpath.split(".")[-1]
             os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
+            usbsrcpaths.append(usbsrcpath)
+        for usb,usbsrcpath in zip(self.usbs,usbsrcpaths):
             pool.apply_async(self.test_write_read_md5,(usb,usbsrcpath))
         pool.close()
         pool.join()
