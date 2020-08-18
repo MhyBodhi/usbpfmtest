@@ -53,30 +53,22 @@ class TestUsb():
 
     def test_write_read_md5(self,usb,usbsrcpath):
         sum_read = 0
-        sum_write = 0
         md5_success = 0
         times = args.times
         testsum = 1
         while times > 0:
             logging.info("%s第"%usb+str(testsum)+"次测试...")
-            #测试写
-            logging.info("测试%s写速度..."%usb)
-            os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=2048 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
-            trans_unit = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
-            result = float(os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb)).read().strip())
+            # 测试读
+            logging.info("测试%s读速度..." % usb)
+            os.system(
+                'cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(
+                    usb=usb))
+            trans_unit = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
+            result = float(
+                os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb)).read().strip())
             if trans_unit == "kB/s":
                 result /= 1024
-            logging.info("%s写速度%.2fMB/s"%(usb,result))
-            sum_write += result
-
-            #测试读
-            logging.info("测试%s读速度..."%usb)
-            os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(usb=usb))
-            trans_unit =  os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
-            result = float(os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb)).read().strip())
-            if trans_unit == "kB/s":
-                result /= 1024
-            logging.info("%s读速度%.2fMB/s"%(usb,result))
+            logging.info("%s读速度%.2fMB/s" % (usb, result))
             sum_read += result
 
             #测试文件md5
@@ -89,12 +81,10 @@ class TestUsb():
             testsum += 1
             times -= 1
 
-        avg_write = "%.2f"%(sum_write/args.times)
         avg_read = "%.2f"%(sum_read/args.times)
         per_success = "%.2f%%"%(md5_success/args.times*100)
         headers = ["设备","测试项", "次数", "值"]
         rows = [
-            {"设备":usb,"测试项": "写速度", "次数": args.times, "值": "平均"+avg_write+"MB/s"},
             {"设备":usb,"测试项": "读速度", "次数": args.times, "值": "平均"+avg_read+"MB/s"},
             {"设备":usb,"测试项": "文件md5验证", "次数": args.times, "值": "成功率"+per_success},
         ]
@@ -150,6 +140,8 @@ class TestUsb():
     def run(self):
         pool = Pool(processes=10)
         usbsrcpaths = []
+        for usb in self.usbs:
+            os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=4k count=4096 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
         for usb in self.usbs:
             usbsrcpath = "../resources/" + usb + "." + self.srcpath.split(".")[-1]
             os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
