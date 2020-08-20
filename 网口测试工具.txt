@@ -1,3 +1,0 @@
-netperf:https://www.ibm.com/developerworks/cn/linux/l-netperf/
-iperf3:https://www.cnblogs.com/hjc4025/p/10438028.html
-nc:
