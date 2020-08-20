@@ -15,7 +15,7 @@ logging = logging.getLogger()
 class TestUsb():
 
     def __init__(self):
-        os.system("sudo bash ../__init__.sh &> /dev/null")
+        os.system("cd .. && sudo mkdir resources &> /dev/null && sudo mkdir reports &> /dev/null")
         regex = re.compile("\s+(.*[1-9]+)\s+")
         self.devs = os.popen("ls /dev/sd*").read()
         logging.info(("devs", self.devs))
