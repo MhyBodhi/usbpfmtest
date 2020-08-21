@@ -15,7 +15,7 @@ logging = logging.getLogger()
 class TestUsb():
 
     def __init__(self):
-        os.system("cd .. && sudo mkdir resources &> /dev/null && sudo mkdir reports &> /dev/null")
+        os.system("cd .. && sudo mkdir resources reports &> /dev/null")
         regex = re.compile("\s+(.*[1-9]+)\s+")
         self.devs = os.popen("ls /dev/sd*").read()
         logging.info(("devs", self.devs))
@@ -165,7 +165,8 @@ if __name__ == '__main__':
             os.remove("../reports/"+file)
         os.remove("../total.csv")
     except:
-        logging.info("清理发生了异常...")
+        pass
+        #logging.info("清理发生了异常...")
     parse = argparse.ArgumentParser()
     parse.add_argument("-p","--path",default="https://pp.qn.img-space.com/201911/12/3cfc1c9b6781a772a2aa776de9df693c.jpg?",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
     parse.add_argument("-c","--times",type=int,help="test times ...")
