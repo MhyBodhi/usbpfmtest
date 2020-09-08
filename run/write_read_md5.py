@@ -6,7 +6,7 @@ import re
 import os
 import hashlib
 import logging.config
-from multiprocessing import Pool
+from multiprocessing import Process,Pool,Manager
 import requests
 
 logging.config.fileConfig("../log/log.conf")
@@ -51,12 +51,15 @@ class TestUsb():
                 raise FileNotFoundError
         self.dstpath =None
 
-    def test_write_read_md5(self,usb,usbsrcpath):
+    def test_write_read_md5(self,q,usb,usbsrcpath):
         sum_read = 0
         md5_success = 0
         times = args.times
         testsum = 1
         while times > 0:
+            while True:
+                if q["status"]:
+                    break
             logging.info("%s第"%usb+str(testsum)+"次测试...")
             # 测试读
             logging.info("测试%s读速度..." % usb)
@@ -80,6 +83,7 @@ class TestUsb():
                 logging.warning("%s文件md5验证失败"%usb)
             testsum += 1
             times -= 1
+            #改变回状态
 
         avg_read = "%.2f"%(sum_read/args.times)
         per_success = "%.2f%%"%(md5_success/args.times*100)
@@ -139,6 +143,7 @@ class TestUsb():
 
     def run(self):
         pool = Pool(processes=10)
+
         usbsrcpaths = []
         for usb in self.usbs:
             os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=4k count=4096 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
@@ -147,7 +152,7 @@ class TestUsb():
             os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
             usbsrcpaths.append(usbsrcpath)
         for usb,usbsrcpath in zip(self.usbs,usbsrcpaths):
-            pool.apply_async(self.test_write_read_md5,(usb,usbsrcpath))
+            pool.apply_async(self.test_write_read_md5,(q,usb,usbsrcpath))
         pool.close()
         pool.join()
 
@@ -156,6 +161,15 @@ class TestUsb():
         with open(self.srcpath, "wb") as f:
             f.write(res)
         logging.info("下载源文件成功...")
+
+def judge(q):
+    while True:
+        keys = list(dict(q).keys())
+        if False not in [q[key] for key in keys if key != "status"] :
+            q["status"] = 1
+        else:
+            q["status"] = 0
+
 
 if __name__ == '__main__':
 
@@ -176,6 +190,11 @@ if __name__ == '__main__':
         parse.print_help()
         sys.exit()
 
+    q = Manager().dict()
+    p1 = Process(target=judge,args=(q,))
+    p1.start()
     usb = TestUsb()
     usb.run()
     usb.totalreports()
+    p1.terminate()
+
