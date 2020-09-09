@@ -57,9 +57,11 @@ class TestUsb():
         times = args.times
         testsum = 1
         while times > 0:
+            q[usb] = True
             while True:
                 if q["status"]:
                     break
+            q[usb] = False
             logging.info("%s第"%usb+str(testsum)+"次测试...")
             # 测试读
             logging.info("测试%s读速度..." % usb)
@@ -163,11 +165,12 @@ class TestUsb():
         logging.info("下载源文件成功...")
 
 def judge(q):
+    q["status"] = 0
     while True:
         keys = list(dict(q).keys())
         if False not in [q[key] for key in keys if key != "status"] :
             q["status"] = 1
-        else:
+        if True not in [q[key] for key in keys if key != "status"] :
             q["status"] = 0
 
 
@@ -197,4 +200,3 @@ if __name__ == '__main__':
     usb.run()
     usb.totalreports()
     p1.terminate()
-
