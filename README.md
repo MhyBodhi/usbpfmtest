@@ -18,10 +18,12 @@ usb性能测试
  * 参数
     1. -p,指定传输文件源路径，本地或网络路径，eg. -p /home/kylin/test.jpg or -p https://www.baidu.com/.../xxx.jpg
     2. -c,指定测试次数,测试次数为u盘读、文件传输次数,读速度取平均值eg. -c 10
+    3. -f,是否过滤系统分区，该参数会过滤系统分区，当系统有多个分区时需要过滤，改参数会过滤掉设备/dev/sda相关的分区，是否需要改参数取决于kylin系统是否进行了多个分区
  * 报告
     1. 生成的子报告位于reports目录
     2. 总报告(total.csv)位于项目的根路径
  * 例子
     *插入u盘开始测试，多个u盘以多进程方式运行*
     1. 测试10次，传输源文件为本地路径,eg.sudo python3 write_read_md5.py -c 10 -p ../test.mp4
-    2. 测试10次,传输源文件为网络路径,eg.sudo python3 write_read_md5.py -c 10 -p https://www.baidu.com/.../xxx.jpg
+    2. 测试10次，传输源文件为本地路径,过滤掉系统分区,eg.sudo python3 write_read_md5.py -c 10 -p ../test.mp4 -f
+    3. 测试10次,传输源文件为网络路径,eg.sudo python3 write_read_md5.py -c 10 -p https://www.baidu.com/.../xxx.jpg
