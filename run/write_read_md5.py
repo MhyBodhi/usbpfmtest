@@ -17,7 +17,10 @@ class TestUsb():
     def __init__(self):
         os.system("cd .. && sudo mkdir resources reports &> /dev/null")
         regex = re.compile("\s+(.*[1-9]+)\s+")
-        self.devs = os.popen("ls /dev/sd*").read()
+        if args.f:
+            self.devs = os.popen('ls /dev/sd*|grep -v "/dev/sda"').read()
+        else:
+            self.devs = os.popen('ls /dev/sd*').read()
         logging.info(("devs", self.devs))
         self.usbdevs = regex.findall(self.devs)
 
@@ -167,13 +170,15 @@ class TestUsb():
 def judge(q):
     q["status"] = 0
     while True:
-        keys = list(dict(q).keys())
-        if False not in [q[key] for key in keys if key != "status"] :
-            q["status"] = 1
-        if True not in [q[key] for key in keys if key != "status"] :
-            q["status"] = 0
-
-
+        try:
+            keys = list(dict(q).keys())
+            if False not in [q[key] for key in keys if key != "status"] :
+                q["status"] = 1
+            if True not in [q[key] for key in keys if key != "status"] :
+                q["status"] = 0
+        except Exception as e:
+            logging.info(e)
+            
 if __name__ == '__main__':
 
     try:
@@ -187,6 +192,7 @@ if __name__ == '__main__':
     parse = argparse.ArgumentParser()
     parse.add_argument("-p","--path",default="https://pp.qn.img-space.com/201911/12/3cfc1c9b6781a772a2aa776de9df693c.jpg?",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
     parse.add_argument("-c","--times",type=int,help="test times ...")
+    parse.add_argument("-f","--filter",action="store_true",default=False,help="Filter system partitions")
 
     args = parse.parse_args()
     if args.times == None or args.path == None:
