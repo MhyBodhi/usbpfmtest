@@ -17,7 +17,7 @@ class TestUsb():
     def __init__(self):
         os.system("cd .. && sudo mkdir resources reports &> /dev/null")
         regex = re.compile("\s+(.*[1-9]+)\s+")
-        if args.f:
+        if args.filter:
             self.devs = os.popen('ls /dev/sd*|grep -v "/dev/sda"').read()
         else:
             self.devs = os.popen('ls /dev/sd*').read()
