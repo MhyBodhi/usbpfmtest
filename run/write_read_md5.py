@@ -180,6 +180,7 @@ def judge(q):
             q["status"] = 1
         if True not in [q[key] for key in keys if key != "status"]:
             q["status"] = 0
+        print(dict(q))
 
 
             
