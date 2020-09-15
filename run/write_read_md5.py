@@ -195,7 +195,7 @@ if __name__ == '__main__':
         #logging.info("清理发生了异常...")
     parse = argparse.ArgumentParser()
     parse.add_argument("-p","--path",default="https://pp.qn.img-space.com/201911/12/3cfc1c9b6781a772a2aa776de9df693c.jpg?",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
-    parse.add_argument("-c","--times",type=int,help="test times ...")
+    parse.add_argument("-c","--times",type=int,help="test times ...",default=10)
     parse.add_argument("-f","--filter",action="store_true",default=False,help="Filter system partitions")
 
     args = parse.parse_args()
