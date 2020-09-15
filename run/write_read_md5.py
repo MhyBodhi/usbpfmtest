@@ -12,6 +12,8 @@ import requests
 logging.config.fileConfig("../log/log.conf")
 logging = logging.getLogger()
 
+
+
 class TestUsb():
 
     def __init__(self):
@@ -69,11 +71,11 @@ class TestUsb():
             # 测试读
             logging.info("测试%s读速度..." % usb)
             os.system(
-                'cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(
+                'cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>../resources/{usb}read.txt 2>&1'.format(
                     usb=usb))
-            trans_unit = os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
+            trans_unit = os.popen("cat ../resources/%sread.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
             result = float(
-                os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb)).read().strip())
+                os.popen("cat ../resources/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb)).read().strip())
             if trans_unit == "kB/s":
                 result /= 1024
             logging.info("%s读速度%.2fMB/s" % (usb, result))
@@ -151,7 +153,7 @@ class TestUsb():
 
         usbsrcpaths = []
         for usb in self.usbs:
-            os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=4k count=4096 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
+            os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=4k count=4096 conv=fsync 1> ../resources/{usb}write.txt 2>&1'.format(usb=usb))
         for usb in self.usbs:
             usbsrcpath = "../resources/" + usb + "." + self.srcpath.split(".")[-1]
             os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
@@ -170,14 +172,14 @@ class TestUsb():
 def judge(q):
     q["status"] = 0
     while True:
-        try:
-            keys = list(dict(q).keys())
-            if False not in [q[key] for key in keys if key != "status"] :
-                q["status"] = 1
-            if True not in [q[key] for key in keys if key != "status"] :
-                q["status"] = 0
-        except Exception as e:
-            logging.info(e)
+        # try:
+        keys = list(dict(q).keys())
+        if False not in [q[key] for key in keys if key != "status"]:
+            q["status"] = 1
+        if True not in [q[key] for key in keys if key != "status"]:
+            q["status"] = 0
+        print(dict(q))
+
             
 if __name__ == '__main__':
 
