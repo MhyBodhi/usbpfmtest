@@ -17,7 +17,7 @@ logging = logging.getLogger()
 class TestUsb():
 
     def __init__(self):
-        self.script_path = os.popen("pwd").read()
+        self.script_path = os.popen("pwd").readline().strip()
         print("self.script_path",self.script_path)
         os.system("cd .. && sudo mkdir resources reports &> /dev/null")
         regex = re.compile("\s+(.*[1-9]+)\s+")
