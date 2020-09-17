@@ -9,7 +9,7 @@ import logging.config
 from multiprocessing import Process,Pool,Manager
 import requests
 
-logging.config.fileConfig("../log/log.conf")
+logging.config.fileConfig("../config/log.conf")
 logging = logging.getLogger()
 
 
@@ -66,8 +66,10 @@ class TestUsb():
         while times > 0:
             q[usb] = True
             while True:
-                if q["status"]:
-                    break
+                try:
+                    if q["status"]:
+                        break
+                except:pass
             q[usb] = False
             logging.info("%s第"%usb+str(testsum)+"次测试...")
             # 测试读
@@ -205,9 +207,9 @@ if __name__ == '__main__':
         sys.exit()
 
     q = Manager().dict()
-    p1 = Process(target=judge,args=(q,))
-    p1.start()
     usb = TestUsb()
     usb.run()
+    p1 = Process(target=judge, args=(q,))
+    p1.start()
     usb.totalreports()
     p1.terminate()
