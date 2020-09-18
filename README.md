@@ -24,6 +24,6 @@ usb性能测试
     *插入u盘开始测试，多个u盘以多进程方式运行*
     1. 测试10次，传输文件为本地路径,eg.sudo python3 write_read_md5.py -c 10 -p ../test.mp4
     2. 测试10次，传输文件为本地路径,过滤掉系统分区,eg.sudo python3 write_read_md5.py -c 10 -p ../test.mp4 -f
-    3. 测试10次,传输源文件为网络路径,eg.sudo python3 write_read_md5.py -c 10 -p https://www.baidu.com/.../xxx.jpg
+    3. 测试10次,传输文件为网络路径,eg.sudo python3 write_read_md5.py -c 10 -p https://www.baidu.com/.../xxx.jpg
  * 备注
     1. 由于系统缓存机制，该脚本不作为评估U盘读写速度的判断,同时也不作为评估U口吞吐量的判断。该脚本的意义在于验证是否丢包、以及在多进程压力环境下的频繁数据拷贝时稳定性。
