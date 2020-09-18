@@ -6,25 +6,22 @@ import re
 import os
 import hashlib
 import logging.config
-from multiprocessing import Process,Pool,Manager
+from multiprocessing import Pool
 import requests
 
 logging.config.fileConfig("../config/log.conf")
 logging = logging.getLogger()
 
-
-
 class TestUsb():
 
     def __init__(self):
-        self.script_path = os.popen("pwd").readline().strip()
-        print("self.script_path",self.script_path)
-        os.system("cd .. && sudo mkdir resources reports &> /dev/null")
+        os.system("cd .. && mkdir resources reports &> /dev/null")
         regex = re.compile("\s+(.*[1-9]+)\s+")
         if args.filter:
             self.devs = os.popen('ls /dev/sd*|grep -v "/dev/sda"').read()
         else:
             self.devs = os.popen('ls /dev/sd*').read()
+
         logging.info(("devs", self.devs))
         self.usbdevs = regex.findall(self.devs)
 
@@ -58,31 +55,32 @@ class TestUsb():
                 raise FileNotFoundError
         self.dstpath =None
 
-    def test_write_read_md5(self,q,usb,usbsrcpath):
+    def test_write_read_md5(self,usb,usbsrcpath):
         sum_read = 0
+        sum_write = 0
         md5_success = 0
         times = args.times
         testsum = 1
         while times > 0:
-            q[usb] = True
-            while True:
-                try:
-                    if q["status"]:
-                        break
-                except:pass
-            q[usb] = False
             logging.info("%s第"%usb+str(testsum)+"次测试...")
-            # 测试读
-            logging.info("测试%s读速度..." % usb)
-            os.system(
-                'cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>{script_path}/../resources/{usb}read.txt 2>&1'.format(
-                    usb=usb,script_path=self.script_path))
-            trans_unit = os.popen("cat ../resources/%sread.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
-            result = float(
-                os.popen("cat ../resources/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb)).read().strip())
+            #测试写
+            logging.info("测试%s写速度..."%usb)
+            os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=1k count=2048 conv=fsync 1> ~/{usb}write.txt 2>&1'.format(usb=usb))
+            trans_unit = os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
+            result = float(os.popen("cat ~/%swrite.txt |grep 'bytes'|awk '{print $10}'|tail -n 1"%(usb)).read().strip())
             if trans_unit == "kB/s":
                 result /= 1024
-            logging.info("%s读速度%.2fMB/s" % (usb, result))
+            logging.info("%s写速度%.2fMB/s"%(usb,result))
+            sum_write += result
+
+            #测试读
+            logging.info("测试%s读速度..."%usb)
+            os.system('cd /mnt/{usb};sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=./1g of=/dev/null bs=1k 1>~/{usb}read.txt 2>&1'.format(usb=usb))
+            trans_unit =  os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $11}'|tail -n 1" % (usb)).read().strip()
+            result = float(os.popen("cat ~/%sread.txt |grep 'bytes'|awk '{print $10}'|tail -n 1" % (usb)).read().strip())
+            if trans_unit == "kB/s":
+                result /= 1024
+            logging.info("%s读速度%.2fMB/s"%(usb,result))
             sum_read += result
 
             #测试文件md5
@@ -94,13 +92,14 @@ class TestUsb():
                 logging.warning("%s文件md5验证失败"%usb)
             testsum += 1
             times -= 1
-            #改变回状态
 
-        avg_read = "%.2f"%(sum_read/args.times)
+        # avg_write = "%.2f"%(sum_write/args.times)
+        # avg_read = "%.2f"%(sum_read/args.times)
         per_success = "%.2f%%"%(md5_success/args.times*100)
         headers = ["设备","测试项", "次数", "值"]
         rows = [
-            {"设备":usb,"测试项": "读速度", "次数": args.times, "值": "平均"+avg_read+"MB/s"},
+            # {"设备":usb,"测试项": "写速度", "次数": args.times, "值": "平均"+avg_write+"MB/s"},
+            # {"设备":usb,"测试项": "读速度", "次数": args.times, "值": "平均"+avg_read+"MB/s"},
             {"设备":usb,"测试项": "文件md5验证", "次数": args.times, "值": "成功率"+per_success},
         ]
 
@@ -154,16 +153,10 @@ class TestUsb():
 
     def run(self):
         pool = Pool(processes=10)
-
-        usbsrcpaths = []
-        for usb in self.usbs:
-            os.system('cd /mnt/{usb};rm -rf ./1g;sudo sh -c "sync && echo 3 > /proc/sys/vm/drop_caches";dd if=/dev/zero of=./1g bs=4k count=4096 conv=fsync 1> {script_path}/../resources/{usb}write.txt 2>&1'.format(usb=usb,script_path=self.script_path))
         for usb in self.usbs:
             usbsrcpath = "../resources/" + usb + "." + self.srcpath.split(".")[-1]
             os.system("sudo cp -rf {srcfile} {usbsrcpath}".format(srcfile=self.srcpath, usbsrcpath=usbsrcpath))
-            usbsrcpaths.append(usbsrcpath)
-        for usb,usbsrcpath in zip(self.usbs,usbsrcpaths):
-            pool.apply_async(self.test_write_read_md5,(q,usb,usbsrcpath))
+            pool.apply_async(self.test_write_read_md5,(usb,usbsrcpath))
         pool.close()
         pool.join()
 
@@ -171,21 +164,8 @@ class TestUsb():
         res = requests.get(self.url).content
         with open(self.srcpath, "wb") as f:
             f.write(res)
-        logging.info("下载源文件成功...")
+        logging.info("下载文件成功...")
 
-def judge(q):
-    q["status"] = 0
-    while True:
-        # try:
-        keys = list(dict(q).keys())
-        if False not in [q[key] for key in keys if key != "status"]:
-            q["status"] = 1
-        if True not in [q[key] for key in keys if key != "status"]:
-            q["status"] = 0
-        print(dict(q))
-
-
-            
 if __name__ == '__main__':
 
     try:
@@ -194,22 +174,17 @@ if __name__ == '__main__':
             os.remove("../reports/"+file)
         os.remove("../total.csv")
     except:
-        pass
-        #logging.info("清理发生了异常...")
+        logging.info("清理发生了异常...")
     parse = argparse.ArgumentParser()
     parse.add_argument("-p","--path",default="https://pp.qn.img-space.com/201911/12/3cfc1c9b6781a772a2aa776de9df693c.jpg?",help="Specify the transfer file path,Local path or network path...eg./home/test.jpg or https://www.baidu.com/../xxx.jpg")
-    parse.add_argument("-c","--times",type=int,help="test times ...",default=10)
-    parse.add_argument("-f","--filter",action="store_true",default=False,help="Filter system partitions")
+    parse.add_argument("-c","--times",type=int,help="test times ...")
+    parse.add_argument("-f", "--filter", action="store_true", default=False, help="Filter system partitions")
 
     args = parse.parse_args()
     if args.times == None or args.path == None:
         parse.print_help()
         sys.exit()
 
-    q = Manager().dict()
     usb = TestUsb()
     usb.run()
-    p1 = Process(target=judge, args=(q,))
-    p1.start()
     usb.totalreports()
-    p1.terminate()
